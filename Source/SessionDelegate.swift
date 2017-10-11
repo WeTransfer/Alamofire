@@ -544,7 +544,8 @@ extension SessionDelegate: URLSessionDataDelegate {
     /// - parameter session:  The session containing the data task that provided data.
     /// - parameter dataTask: The data task that provided data.
     /// - parameter data:     A data object containing the transferred data.
-    open func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+    open func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data?) {
+        guard let data = data else { return }
         if let dataTaskDidReceiveData = dataTaskDidReceiveData {
             dataTaskDidReceiveData(session, dataTask, data)
         } else if let delegate = self[dataTask]?.delegate as? DataTaskDelegate {
