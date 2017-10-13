@@ -1,7 +1,7 @@
 //
 //  URLProtocolTests.swift
 //
-//  Copyright (c) 2014-2016 Alamofire Software Foundation (http://alamofire.org/)
+//  Copyright (c) 2014-2017 Alamofire Software Foundation (http://alamofire.org/)
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -35,10 +35,16 @@ class ProxyURLProtocol: URLProtocol {
     }
 
     lazy var session: URLSession = {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpAdditionalHeaders = SessionManager.defaultHTTPHeaders
+        let configuration: URLSessionConfiguration = {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.httpAdditionalHeaders = SessionManager.defaultHTTPHeaders
 
-        return Foundation.URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+            return configuration
+        }()
+
+        let session = Foundation.URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+
+        return session
     }()
 
     var activeTask: URLSessionTask?
@@ -46,17 +52,23 @@ class ProxyURLProtocol: URLProtocol {
     // MARK: Class Request Methods
 
     override class func canInit(with request: URLRequest) -> Bool {
-        return (URLProtocol.property(forKey: PropertyKeys.handledByForwarderURLProtocol, in: request) == nil)
+        if URLProtocol.property(forKey: PropertyKeys.handledByForwarderURLProtocol, in: request) != nil {
+            return false
+        }
+
+        return true
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
-        guard let headers = request.allHTTPHeaderFields else { return request }
-        
-        do {
-            return try URLEncoding.default.encode(request, with: headers)
-        } catch {
-            return request
+        if let headers = request.allHTTPHeaderFields {
+            do {
+                return try URLEncoding.default.encode(request, with: headers)
+            } catch {
+                return request
+            }
         }
+
+        return request
     }
 
     override class func requestIsCacheEquivalent(_ a: URLRequest, to b: URLRequest) -> Bool {
@@ -82,17 +94,17 @@ class ProxyURLProtocol: URLProtocol {
 
 extension ProxyURLProtocol: URLSessionDataDelegate {
 
-    // MARK: URLSessionDelegate
-    
+    // MARK: NSURLSessionDelegate
+
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         client?.urlProtocol(self, didLoad: data)
     }
-    
+
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let response = task.response {
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         }
-        
+
         client?.urlProtocolDidFinishLoading(self)
     }
 }

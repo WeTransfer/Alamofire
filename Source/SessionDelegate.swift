@@ -1,7 +1,7 @@
 //
 //  SessionDelegate.swift
 //
-//  Copyright (c) 2014-2016 Alamofire Software Foundation (http://alamofire.org/)
+//  Copyright (c) 2014-2017 Alamofire Software Foundation (http://alamofire.org/)
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -462,8 +462,8 @@ extension SessionDelegate: URLSessionTaskDelegate {
         // Determine whether an error has occurred
         var error: Error? = error
 
-        if let taskDelegate = self[task]?.delegate, taskDelegate.error != nil {
-            error = taskDelegate.error
+        if request.delegate.error != nil {
+            error = request.delegate.error
         }
 
         /// If an error occurred and the retrier is set, asynchronously ask the retrier if the request
@@ -544,7 +544,9 @@ extension SessionDelegate: URLSessionDataDelegate {
     /// - parameter session:  The session containing the data task that provided data.
     /// - parameter dataTask: The data task that provided data.
     /// - parameter data:     A data object containing the transferred data.
-    open func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+    /// Note: Using optional `Data` to fix a crash: https://github.com/Alamofire/Alamofire/issues/2138
+    open func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data?) {
+        guard let data = data else { return }
         if let dataTaskDidReceiveData = dataTaskDidReceiveData {
             dataTaskDidReceiveData(session, dataTask, data)
         } else if let delegate = self[dataTask]?.delegate as? DataTaskDelegate {
